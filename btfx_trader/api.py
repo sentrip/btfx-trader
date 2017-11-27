@@ -53,8 +53,8 @@ def parse_trades(symbol, data):
             result.append(d)
         return result
     else:
-        symbol, trade = items
-        if symbol == 'tu':
+        sb, trade = items
+        if sb == 'tu':
             ts = datetime.fromtimestamp(trade.pop(1) / 1000)
             d = dict(zip(['id', 'amount', 'price'], trade))
             d.update(time=ts, symbol=symbol)
