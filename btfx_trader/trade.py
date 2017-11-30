@@ -14,12 +14,13 @@ class Trader:
         self.symbol = symbol
         self.api = BtfxWss(*auth, log_level='CRITICAL')
         self.rest = Bitfinex(*auth)
-        self.balance, self.coin = self.wallet('usd'), self.wallet(self.symbol)
-        self.price = 0.
+        self.price = None
         self.connected = False
         self.running = True
         self.updater = Thread(target=self.update_price)
         self.updater.start()
+        while self.price is None:
+            time.sleep(0.5)
 
     def update_price(self):
         self.api.start()
@@ -40,10 +41,15 @@ class Trader:
             self.price = tickers.get()[0][0][6]
 
     def wallet(self, symbol):
-        resp = self.rest.private_query('balances').json()
-        for i in resp:
-            if i['type'] == 'exchange' and i['currency'] == symbol:
-                return eval(i['available'])
+        if symbol != 'usd':
+            symbol = symbol.lower().strip('usd')
+        res = None
+        while res is None:
+            resp = self.rest.private_query('balances').json()
+            for i in resp:
+                if i['type'] == 'exchange' and i['currency'] == symbol:
+                    res = eval(i['available'])
+        return res
 
     def _order(self, symbol, amount, side):
         q = {'symbol': symbol, 'amount': amount, 'side': side,
@@ -51,32 +57,34 @@ class Trader:
         return self.rest.private_query('order/new', params=q)
 
     def buy(self, percentage):
-        self.balance, self.coin = self.wallet('usd'), self.wallet(self.symbol)
-        if self.balance > 1:
-            n = round(self.balance * percentage / self.price * 0.9999, 8)
+        percentage = min(percentage, 1)
+        balance, coin = self.wallet('usd'), self.wallet(self.symbol)
+        if balance > 1:
+            n = round(balance * percentage / self.price, 8)
             resp = self._order(self.symbol, '%.5f' % n, 'buy')
             if resp.status_code != 200:
                 log.error('Buy order returned error %d, %s', resp.status_code, resp.text)
             else:
-                self.balance -= self.price * n
-                self.coin += n
-                log.warning('Bought %s at %-.2f for %.1f!', self.symbol, self.price, n * self.price)
+                j = resp.json()
+                log.warning('Bought %s at %-.2f for $%.1f!',
+                            self.symbol, eval(j['price']), eval(j['original_amount']) * eval(j['price']))
         else:
-            log.error('Tried to buy when balance is less than $1, %f', self.balance)
+            log.error('Tried to buy when balance is less than $1, %f', balance)
 
     def sell(self, percentage):
-        self.balance, self.coin = self.wallet('usd'), self.wallet(self.symbol)
-        if self.coin > 0:
-            n = round(self.coin * percentage, 8) * 0.9999
+        percentage = min(percentage, 1)
+        balance, coin = self.wallet('usd'), self.wallet(self.symbol)
+        if coin > 0:
+            n = round(coin * percentage, 8)
             resp = self._order(self.symbol, '%.5f' % n, 'sell')
             if resp.status_code != 200:
                 log.error('Sell order returned error %d, %s', resp.status_code, resp.text)
             else:
-                self.balance += self.price * n
-                self.coin -= n
-                log.warning('Sold %s at %-.2f for %.1f!', self.symbol, self.price, n * self.price)
+                j = resp.json()
+                log.warning('Sold %s at %-.2f for $%.1f!',
+                            self.symbol, eval(j['price']), eval(j['original_amount']) * eval(j['price']))
         else:
-            log.error('Tried to buy when coin is 0, %f', self.coin)
+            log.error('Tried to buy when coin is 0, %f', coin)
 
     def shutdown(self):
         self.api.unsubscribe_from_ticker(self.symbol)
