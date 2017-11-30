@@ -61,7 +61,7 @@ class Trader:
         balance, coin = self.wallet('usd'), self.wallet(self.symbol)
         if balance > 1:
             n = round(balance * percentage / self.price, 8)
-            resp = self._order(self.symbol, '%.5f' % n, 'buy')
+            resp = self._order(self.symbol, '%.8f' % n, 'buy')
             if resp.status_code != 200:
                 log.error('Buy order returned error %d, %s', resp.status_code, resp.text)
             else:
@@ -76,7 +76,7 @@ class Trader:
         balance, coin = self.wallet('usd'), self.wallet(self.symbol)
         if coin > 0:
             n = round(coin * percentage, 8)
-            resp = self._order(self.symbol, '%.5f' % n, 'sell')
+            resp = self._order(self.symbol, '%.8f' % n, 'sell')
             if resp.status_code != 200:
                 log.error('Sell order returned error %d, %s', resp.status_code, resp.text)
             else:
