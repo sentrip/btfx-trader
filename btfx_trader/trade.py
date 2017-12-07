@@ -66,13 +66,13 @@ class Trader:
                     n = round(balance * percentage / self.price, 8)
                     resp = self._order(self.symbol, '%.8f' % n, 'buy')
                     if resp.status_code != 200:
-                        log.error('Buy order returned error %d, %s', resp.status_code, resp.text)
+                        log.error('Buy order for %s returned error %d, %s', self.symbol, resp.status_code, resp.text)
                     else:
                         j = resp.json()
                         log.warning('Bought %s at %-.2f for $%.1f!',
                                     self.symbol, eval(j['price']), eval(j['original_amount']) * eval(j['price']))
                 else:
-                    log.error('Tried to buy when balance is less than $1, %f', balance)
+                    log.error('Tried to buy %s when balance is less than $1, %f', self.symbol, balance)
                 return
             except Exception as e:
                 log.error('Error in %s: %s', self.symbol, repr(e))
@@ -86,13 +86,13 @@ class Trader:
                     n = round(coin * percentage, 8)
                     resp = self._order(self.symbol, '%.8f' % n, 'sell')
                     if resp.status_code != 200:
-                        log.error('Sell order returned error %d, %s', resp.status_code, resp.text)
+                        log.error('Sell order for %s returned error %d, %s', self.symbol, resp.status_code, resp.text)
                     else:
                         j = resp.json()
                         log.warning('Sold %s at %-.2f for $%.1f!',
                                     self.symbol, eval(j['price']), eval(j['original_amount']) * eval(j['price']))
                 else:
-                    log.error('Tried to buy when coin is 0, %f', coin)
+                    log.error('Tried to sell %s when coin is 0, %f', self.symbol, coin)
                 return
             except Exception as e:
                 log.error('Error in %s: %s', self.symbol, repr(e))
