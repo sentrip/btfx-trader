@@ -73,13 +73,14 @@ class Trader:
                         coin = eval(i['available'])
         return balance, coin
 
-    def _order(self, order, use_all=False):
+    def _order(self, order, use_all=False, force_price=None):
+        price = force_price or self.price
         while True:
             balance, coin = self.wallet()
 
             if order > 0:
                 side = 'buy'
-                amount = balance / self.price
+                amount = balance / price
             else:
                 side = 'sell'
                 amount = coin
@@ -94,7 +95,7 @@ class Trader:
                 'amount': '%.8f' % (amount * abs(order)),
                 'side': side,
                 'type': 'exchange limit',
-                'price': '%.2f' % (self.price * (0.995 if side == 'sell' else 1.005)),
+                'price': '%.2f' % (price * (0.995 if side == 'sell' else 1.005)),
                 'use_all_available': int(use_all)
                  }
             try:
@@ -122,9 +123,9 @@ class Trader:
             time.sleep(max(0, 1 - (time.time() - start)))
         return exec_price
 
-    def order(self, order, use_all=False):
+    def order(self, order, use_all=False, force_price=None):
         order = min(max(-1., order), 1.)
-        resp = self._order(order, use_all=use_all)
+        resp = self._order(order, use_all=use_all, force_price=force_price)
         if resp is None:
             log.warning('%s %s at %-.2f!',  'Bought' if order > 0 else 'Sold', self.symbol, self.price)
         else:
