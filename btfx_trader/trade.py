@@ -151,3 +151,15 @@ class Trader:
             else:
                 log.debug('Order %s NOT FOUND', str(_id))
                 sleep(2.5)
+
+    def reset(self, symbol):
+        self.update_wallet()
+        self.traded_since_update = True
+        balance = self._wallet['usd']
+        coin = self._wallet[symbol.lower().replace('usd', '')]
+        price = float(self.api.query('GET', 'pubticker/%s' % symbol).json()['last_price'])
+        value = balance + coin * price
+        expected_value = value / 2
+        to_spend = balance - expected_value
+        assert abs(to_spend) > 30, 'Values are close enough'
+        self.order(symbol, 'market', dollar_amount=to_spend)
