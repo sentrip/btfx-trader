@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from contextlib import suppress
 from time import sleep
 
@@ -57,7 +58,9 @@ class Trader:
     def wallet(self):
         resp = self.query('balances')
         all_wallets = [] if resp is None else resp.json()
-        wallet = {w['currency']: float(w['available']) for w in all_wallets if w['type'] == 'exchange'}
+        wallet = defaultdict(float)
+        _wallet = {w['currency']: float(w['available']) for w in all_wallets if w['type'] == 'exchange'}
+        wallet.update(_wallet)
         self.cached_wallet = wallet
         return wallet
 
