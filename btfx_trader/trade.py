@@ -15,7 +15,9 @@ class Trader:
 
     def __init__(self, key, secret):
         self.api = self._api(key=key, secret=secret)
-        self.cached_wallet = {}
+        self._wallet = defaultdict(float)
+        self.cached_wallet = defaultdict(float)
+        self.traded_since_update = True
 
     def query(self, path, **kwargs):
         wait_time = 0.3
@@ -64,6 +66,16 @@ class Trader:
         self.cached_wallet = wallet
         return wallet
 
+    def update_wallet(self):
+        if self.traded_since_update:
+            resp = self.query('balances')
+            all_wallets = [] if resp is None else resp.json()
+            self._wallet = defaultdict(float)
+            _wallet = {w['currency']: float(w['available']) for w in all_wallets if w['type'] == 'exchange'}
+            self._wallet.update(_wallet)
+            self.cached_wallet = self._wallet
+            self.traded_since_update = False
+
     def order(self, symbol, price, *,
               percentage=None, dollar_amount=None,
               pad_price=None, wait_execution=True):
@@ -83,9 +95,10 @@ class Trader:
             delta = price * pad_price
             price += max(delta, 0.01) if buying else min(-delta, -0.01)
 
-        wallet = self.wallet()
-        balance = wallet['usd']
-        coin = wallet[symbol.lower().replace('usd', '')]
+        self.update_wallet()
+        self.traded_since_update = True
+        balance = self._wallet['usd']
+        coin = self._wallet[symbol.lower().replace('usd', '')]
 
         max_amount = balance / price if buying else coin
         if percentage:
