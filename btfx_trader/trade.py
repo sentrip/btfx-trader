@@ -1,165 +1,258 @@
 import logging
-from collections import defaultdict
+from collections import defaultdict, OrderedDict, deque
 from contextlib import suppress
-from time import sleep
+from queue import Empty
+from time import time, sleep
+from threading import Thread
 
-from bitex import Bitfinex
-from requests.exceptions import ReadTimeout
+import requests
+from btfxwss import BtfxWss
 
 log = logging.getLogger(__name__)
 
 
-class Trader:
-    _n_retry_attempts = 5
-    _api = Bitfinex  # for testing purposes
+def get_symbols():
+    return list(
+        map(lambda q: q.upper(),
+            filter(lambda i: 'usd' in i,
+                   requests.get('https://api.bitfinex.com/v1/symbols').json()))
+    )
 
-    def __init__(self, key, secret):
-        self.api = self._api(key=key, secret=secret)
-        self._wallet = defaultdict(float)
-        self.cached_wallet = defaultdict(float)
-        self.traded_since_update = True
 
-    def query(self, path, **kwargs):
-        wait_time = 0.3
-        for attempt in range(1, 1 + self._n_retry_attempts):
-            try:
-                log.debug('Requesting (%d): %s with params: %s', attempt, path, str(kwargs))
-                resp = self.api.private_query(path, **kwargs)
-                resp.raise_for_status()
-                return resp
-            except ReadTimeout as e:
-                log.error('REQUEST TIMEOUT (%d): %s - %s', attempt, path, repr(e))
-                if path == 'order/new':
-                    return None  # Timeout on order submission does not mean order failure
-            except Exception as e:
-                log.error('REQUEST ERROR (%d): %s - %s', attempt, path, repr(e))
-                sleep(wait_time)
-                wait_time *= 2
+class Trader(Thread):
+    _wss_client = BtfxWss
+    _min_order_value = 35.
+    _max_order_history = 100
+    _sleep_time = 0.001
+    _trade_types = {'market', 'limit'}
+
+    def __init__(self, key, secret, symbols=None):
+        super(Trader, self).__init__()
+        if symbols:
+            self.symbols = [s.upper() + ('' if 'usd' in s.lower() else 'USD') for s in symbols]
         else:
-            log_str = 'MAX REQUESTS REACHED (%d): %s' % (self._n_retry_attempts, path)
-            with suppress(NameError, AttributeError):
-                log_str += ' - last response [%d]: %s' % (resp.status_code, resp.text)
-            log.error(log_str)
-            raise ConnectionError('Max retries exceeded (%d)' % self._n_retry_attempts)
+            self.symbols = get_symbols()
 
-    def active_orders(self):
-        resp = self.query('orders')
-        return [] if resp is None else resp.json()
+        self.connected = False
+        self._prices = defaultdict(float)
+        self._wallets = defaultdict(float)
+        self._orders = OrderedDict()
+        self._executed_orders = deque(maxlen=self._max_order_history)
 
-    def last_order(self):
-        orders = self.active_orders()
-        if len(orders) > 0:
-            return list(sorted(orders, key=lambda k: float(k['timestamp']), reverse=True)).pop(0)
+        self._source_handlers = OrderedDict((
+            ('orders', self._handle_order),
+            ('orders_new', self._handle_order),
+            ('orders_update', self._handle_order),
+            ('orders_cancel', self._handle_order),
+            ('wallets', self._handle_wallet)
+        ))
+
+        self.wss = self._wss_client(key=key, secret=secret, log_level='CRITICAL')
+        self.start()
+
+    def _connect(self):
+        self.wss.start()
+        log.debug('Waiting for btfxwss api socket connection...')
+        while not self.wss.conn.connected.is_set():
+            sleep(0.1)
+        log.debug('Waiting for btfxwss api authentication...')
+        self.wss.authenticate()
+        log.debug('Subscribing to symbols...')
+        for symbol in self.symbols:
+            self.wss.subscribe_to_ticker(symbol)
+        self.connected = True
+        log.info('Successfully initialized')
+
+    @staticmethod
+    def _create_order_json(data):
+        orders = []
+        for _id, _, _, symbol, _, ts, remain_amount, amount, _, _, _, _, _, stat, _, _, price, exec_price, *_ in data:
+            orders.append((_id, dict(
+                symbol=symbol[1:].upper(),
+                price=price,
+                executed_price=exec_price,
+                amount=amount,
+                executed=amount - remain_amount,
+                remaining=remain_amount,
+                status=stat.split()[0],
+                timestamp=ts / 1000,
+            )))
+        return orders
+
+    @staticmethod
+    def _log_order(_id, symbol, action, amount, price):
+        log.info('%d (%6s) %-7s %-4s, %.8f for $%.2f at $%.2f', _id, symbol, action,
+                 'BUY' if amount > 0 else 'SELL', abs(amount), abs(amount * price), price)
+
+    def _handle_order(self, _type, data):
+        if _type == 'os':
+            orders = self._create_order_json(data)
+            for _id, order in sorted(orders, key=lambda t: t[1]['timestamp']):
+                self._orders[_id] = order
+        else:
+            _id, order = self._create_order_json([data])[0]
+            if _type == 'oc':
+                if order['status'].startswith('CANCEL'):
+                    self._log_order(_id, order['symbol'], 'CANCEL', order['amount'], order['price'])
+                else:
+                    self._log_order(_id, order['symbol'], 'EXECUTE', order['executed'], order['executed_price'])
+                    self._executed_orders.append((_id, order))
+                del self._orders[_id]
+
+            elif _type in {'on', 'ou'}:
+                self._orders[_id] = order
+                self._log_order(_id, order['symbol'], 'SUBMIT', order['amount'], order['price'])
+
+    def _handle_wallet(self, _type, data):
+        if _type == 'ws':
+            for wallet_type, currency, balance, _, _ in data:
+                if wallet_type.lower() == 'exchange':
+                    self._wallets[currency.lower()] = float(balance)
+        elif _type == 'wu':
+            self._wallets[data[1].lower()] = float(data[2])
+
+    def run(self):
+        self._connect()
+        while self.connected:
+            start_loop = time()
+            for source, handler in self._source_handlers.items():
+                with suppress(Empty):
+                    handler(*(getattr(self.wss, source).get_nowait()[0]))
+            for symbol in self.symbols:
+                with suppress(Empty):
+                    data = self.wss.queue_processor.tickers[('ticker', symbol)].get_nowait()[0]
+                    self._prices[symbol] = data[0][6]
+            sleep(max(0, self._sleep_time - (time() - start_loop)))
+
+    @property
+    def prices(self):
+        return self._prices.copy()
+
+    @property
+    def orders(self):
+        return self._orders.copy()
+
+    @property
+    def executed_orders(self):
+        return OrderedDict(self._executed_orders)
+
+    @property
+    def order_totals(self):
+        totals = defaultdict(float)
+        totals['usd'] = 0.
+        for order in self.orders.values():
+            if order['remaining'] < 0:
+                totals[order['symbol']] += order['remaining']
+            else:
+                totals['usd'] += order['remaining'] * order['price']
+        return totals
+
+    @property
+    def wallets(self):
+        wallets = self._wallets.copy()
+        for symbol, total in self.order_totals.items():
+            wallets[symbol.replace('USD', '').lower()] -= abs(total)
+        return wallets
+
+    @property
+    def orders_value(self):
+        total = 0.
+        for symbol, t in self.order_totals.items():
+            total += abs(t) * (1 if t > 0 else self._prices[symbol])
+        return round(total, 2)
+
+    @property
+    def value(self):
+        total = 0.
+        for c, amount in self._wallets.items():
+            if c != 'usd':
+                amount *= self._prices[c.upper() + 'USD']
+            total += amount
+        return round(total, 2)
 
     def cancel(self, _id):
-        self.query('order/cancel', params={'id': _id})
+        self.wss.cancel_order(multi=False, id=_id)
 
-    def cancel_all(self):
-        self.query('order/cancel/all')
-
-    def wallet(self):
-        resp = self.query('balances')
-        all_wallets = [] if resp is None else resp.json()
-        wallet = defaultdict(float)
-        _wallet = {w['currency']: float(w['available']) for w in all_wallets if w['type'] == 'exchange'}
-        wallet.update(_wallet)
-        self.cached_wallet = wallet
-        return wallet
-
-    def update_wallet(self):
-        if self.traded_since_update:
-            resp = self.query('balances')
-            all_wallets = [] if resp is None else resp.json()
-            self._wallet = defaultdict(float)
-            _wallet = {w['currency']: float(w['available']) for w in all_wallets if w['type'] == 'exchange'}
-            self._wallet.update(_wallet)
-            self.cached_wallet = self._wallet
-            self.traded_since_update = False
+    def cancel_all(self, older_than=0):
+        now = time()
+        for _id, order in self._orders.items():
+            if now - order['timestamp'] > older_than:
+                self.cancel(_id)
 
     def order(self, symbol, price, *,
-              percentage=None, dollar_amount=None,
-              pad_price=None, wait_execution=True):
+              ratio=None, dollar_amount=None,
+              pad_price=None, trade_type='limit', return_id=True):
 
-        assert percentage or dollar_amount, 'Must provide either `percentage` or `dollar_amount`'
-        assert not (percentage and dollar_amount), 'Cannot provide both `percentage` and `dollar_amount`'
+        assert ratio or dollar_amount, 'Must provide either `ratio` or `dollar_amount`'
+        assert not (ratio and dollar_amount), 'Cannot provide both `ratio` and `dollar_amount`'
+        assert trade_type.lower() in self._trade_types, \
+            'Unknown trade type, try one of these: %s' % str(self._trade_types)[1:-1]
 
-        buying = (percentage or dollar_amount) > 0
-        market_order = False
-        if price == 'market':
-            resp = self.api.query('GET', 'pubticker/%s' % symbol).json()
-            price = float(resp['last_price'])
+        buying = (ratio or dollar_amount) > 0
+        symbol = symbol.upper() + ('USD' if 'usd' not in symbol.lower() else '')
+        assert symbol in self.symbols, 'Trader not initialized with %s in symbols'
+
+        if price == 'market' or trade_type == 'market':
+            trade_type = 'market'
+            price = self._prices[symbol]
             pad_price = 0.001
-            market_order = True
 
         if pad_price:
             delta = price * pad_price
             price += max(delta, 0.01) if buying else min(-delta, -0.01)
 
-        self.update_wallet()
-        self.traded_since_update = True
-        balance = self._wallet['usd']
-        coin = self._wallet[symbol.lower().replace('usd', '')]
-
-        max_amount = balance / price if buying else coin
-        if percentage:
-            amount = round(max_amount * abs(percentage), 8)
+        assert price >= 0.01, 'Price cannot be less than $0.01'
+        max_amount = self.wallets['usd'] / price if buying else self.wallets[symbol.lower().replace('usd', '')]
+        if ratio:
+            amount = round(max_amount * ratio, 8)
         else:
-            amount = round(abs(dollar_amount) / price, 8)
+            amount = round(dollar_amount / price, 8)
 
-        assertion_msg = 'Trade value ($%.2f) is %s available trade value ($%.2f)'
-        assert amount <= max_amount, assertion_msg % (amount * price, 'above maximum', max_amount * price)
-        assert amount >= 30 / price, assertion_msg % (amount * price, 'below minimum', 30.)
+        assertion_msg = 'Trade value (${:.2f}) is %s available trade value ($%.2f)'.format(abs(amount))
+        assert abs(amount) >= self._min_order_value / price, assertion_msg % ('below minimum', self._min_order_value)
+        assert abs(amount) <= max_amount, assertion_msg % ('above maximum', max_amount * price)
 
-        resp = self.query('order/new', params={
-            'symbol': symbol,
-            'amount': '%.8f' % amount,
-            'side': 'buy' if buying else 'sell',
-            'type': 'exchange %s' % ('market' if market_order else 'limit'),
-            'price': '%.2f' % round(price, 2)
-        })
+        current_order_ids = set(self._orders.keys())
 
-        execution_price, execution_amount = price, amount
-        if wait_execution:
-            if resp:
-                _id = resp.json()['order_id']
+        self.wss.new_order(
+            cid=int(time()),
+            type="EXCHANGE %s" % trade_type.upper(),
+            symbol="t%s" % symbol,
+            amount="%.8f" % amount,
+            price="%.2f" % price,
+        )
+
+        while return_id:
+            for _id in self._orders:
+                if _id not in current_order_ids:
+                    return _id
             else:
-                _id = (self.last_order() or {'id': None})['id']
+                sleep(self._sleep_time)
 
-            if _id:
-                execution_price, execution_amount = self._wait_order(_id)
+    def wait_execution(self, _id, seconds=1e9):
+        start_time = time()
+        while time() - start_time < seconds:
+            try:
+                ids, trades = tuple(zip(*self._executed_orders))
+                return trades[ids.index(_id)]
+            except ValueError:
+                sleep(self._sleep_time)
+        raise TimeoutError('Waiting for execution of order %d timed out after %d seconds' % (_id, seconds))
 
-        log.warning('%s %s at %-.2f for $%.2f!', 'Bought' if buying else 'Sold',
-                    symbol, execution_price, execution_amount * price)
-        return execution_price
+    def position(self, symbol):
+        return (self._wallets[symbol.lower().replace('usd', '')] * self._prices[symbol]
+                - self._wallets['usd']) / self.value
 
-    def _wait_order(self, _id,):
-        while True:
-            resp = self.api.private_query('order/status', params={'order_id': _id})
-            if resp.status_code == 200:
-                j = resp.json()
-                if not j['is_live']:
-                    return float(j['avg_execution_price']), float(j['executed_amount'])
-                else:
-                    executed_percentage = float(j['executed_amount']) / float(j['original_amount'])
-                    log.debug('Order %s FOUND and still live (%.2f%s)', str(_id), executed_percentage * 100, '%')
-                    sleep(1)
+    def reset_position(self, symbol):
+        try:
+            _id = self.order(symbol, 'market', dollar_amount=self._wallets['usd'] - self.value / 2)
+            self.wait_execution(_id)
+        except AssertionError:
+            log.error('Position already reset (%.4f)', self.position(symbol))
 
-            elif resp.status_code == 429:
-                log.debug('Order %s status request RATE LIMITED', str(_id))
-                sleep(15)
-
-            else:
-                log.debug('Order %s NOT FOUND', str(_id))
-                sleep(2.5)
-
-    def reset(self, symbol):
-        self.update_wallet()
-        self.traded_since_update = True
-        balance = self._wallet['usd']
-        coin = self._wallet[symbol.lower().replace('usd', '')]
-        price = float(self.api.query('GET', 'pubticker/%s' % symbol).json()['last_price'])
-        value = balance + coin * price
-        expected_value = value / 2
-        to_spend = balance - expected_value
-        assert abs(to_spend) > 30, 'Values are close enough'
-        self.order(symbol, 'market', dollar_amount=to_spend)
+    def shutdown(self):
+        self.connected = False
+        for symbol in self.symbols:
+            self.wss.unsubscribe_from_ticker(symbol)
+        self.wss.stop()
+        self.join()
