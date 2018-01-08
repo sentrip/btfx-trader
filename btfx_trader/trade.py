@@ -97,7 +97,8 @@ class Trader(Thread):
                 else:
                     self._log_order(_id, order['symbol'], 'EXECUTE', order['executed'], order['executed_price'])
                     self._executed_orders.append((_id, order))
-                del self._orders[_id]
+                if _id in self._orders:
+                    del self._orders[_id]
 
             elif _type in {'on', 'ou'}:
                 self._orders[_id] = order
