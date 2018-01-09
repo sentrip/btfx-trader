@@ -214,7 +214,7 @@ class Trader(Thread):
         assert abs(amount) <= max_amount, assertion_msg % ('above maximum', max_amount * price)
 
         current_order_ids = set(self._orders.keys())
-
+        last_executed_id = (self._executed_orders or [[None, None]])[-1][0]
         self.wss.new_order(
             cid=int(time()),
             type="EXCHANGE %s" % trade_type.upper(),
@@ -228,7 +228,10 @@ class Trader(Thread):
                 if _id not in current_order_ids:
                     return _id
             else:
-                sleep(self._sleep_time)
+                if len(self._executed_orders) > 0 and self._executed_orders[-1][0] != last_executed_id:
+                    return self._executed_orders[-1][0]
+                else:
+                    sleep(self._sleep_time)
 
     def wait_execution(self, _id, seconds=1e9):
         start_time = time()
