@@ -220,7 +220,7 @@ class Trader(Thread):
             type="EXCHANGE %s" % trade_type.upper(),
             symbol="t%s" % symbol,
             amount="%.8f" % amount,
-            price="%.2f" % price,
+            price="%.4f" % price,
         )
 
         while return_id:
