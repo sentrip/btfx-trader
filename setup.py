@@ -28,7 +28,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-    description="Simple to use wrappers for Bitfinex's web socket api",
+    description="Simple to use wrappers for the Bitfinex web socket api",
     install_requires=requirements,
     license="GNU General Public License v3",
     long_description=readme + '\n\n' + history,

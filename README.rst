@@ -4,18 +4,17 @@ btfx-trader
 
 
 .. image:: https://img.shields.io/pypi/v/btfx_trader.svg
-        :target: https://pypi.python.org/pypi/btfx_trader
+        :target: https://pypi.python.org/pypi/btfx-trader/
 
-.. image:: https://img.shields.io/travis/sentrip/btfx_trader.svg
-        :target: https://travis-ci.org/sentrip/btfx_trader
+.. image:: https://travis-ci.org/sentrip/btfx-trader.svg?branch=master
+        :target: https://travis-ci.org/sentrip/btfx-trader/
 
 .. image:: https://readthedocs.org/projects/btfx-trader/badge/?version=latest
         :target: https://btfx-trader.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-
 .. image:: https://pyup.io/repos/github/sentrip/btfx_trader/shield.svg
-     :target: https://pyup.io/repos/github/sentrip/btfx_trader/
+     :target: https://pyup.io/repos/github/sentrip/btfx-trader/
      :alt: Updates
 
 
@@ -47,7 +46,9 @@ To install btfx-trader, run this command in your terminal:
 Usage
 ------
 
-To use public data::
+To use public data:
+
+.. code-block:: python
 
     from btfx_trader import PublicData
 
@@ -56,10 +57,10 @@ To use public data::
 
     while True:
         data = q.get('tickers', 'BTCUSD')
-::
 
 
-To make an order::
+To make an order:
+.. code-block:: python
 
     from btfx_trader import Trader
 
@@ -67,15 +68,16 @@ To make an order::
     trader.connect()
     # Order 0.01 BTC at $10000 per bitcoin
     order_id = trader.order('BTCUSD', 10000, dollar_amount=100)
-::
 
-To cancel an order::
+
+To cancel an order:
+.. code-block:: python
 
     # for a single order
     trader.cancel(order_id)
     # for multiple orders
     trader.cancel_all(older_than=10)
-::
+
 
 
 Credits
