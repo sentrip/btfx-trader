@@ -60,6 +60,7 @@ To use public data:
 
 
 To make an order:
+
 .. code-block:: python
 
     from btfx_trader import Trader
@@ -71,6 +72,7 @@ To make an order:
 
 
 To cancel an order:
+
 .. code-block:: python
 
     # for a single order
