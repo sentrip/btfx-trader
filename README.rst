@@ -1,0 +1,87 @@
+===========
+btfx-trader
+===========
+
+
+.. image:: https://img.shields.io/pypi/v/btfx_trader.svg
+        :target: https://pypi.python.org/pypi/btfx_trader
+
+.. image:: https://img.shields.io/travis/sentrip/btfx_trader.svg
+        :target: https://travis-ci.org/sentrip/btfx_trader
+
+.. image:: https://readthedocs.org/projects/btfx-trader/badge/?version=latest
+        :target: https://btfx-trader.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
+
+
+.. image:: https://pyup.io/repos/github/sentrip/btfx_trader/shield.svg
+     :target: https://pyup.io/repos/github/sentrip/btfx_trader/
+     :alt: Updates
+
+
+
+"Simple to use wrappers for Bitfinex's web socket api"
+
+
+* Free software: GNU General Public License v3
+* Documentation: https://btfx-trader.readthedocs.io.
+
+
+Features
+--------
+
+* Access to cryptocurrency data with api of queue.Queue
+* Simple api for trading that responds to account data
+* No boilerplate required to start trading
+
+
+Installation
+-------------
+
+To install btfx-trader, run this command in your terminal:
+
+.. code-block:: console
+
+    $ pip install btfx_trader
+
+Usage
+------
+
+To use public data::
+
+    from btfx_trader import PublicData
+
+    q = PublicData(types=['tickers'], symbols=['BTCUSD'])
+    q.connect()
+
+    while True:
+        data = q.get('tickers', 'BTCUSD')
+::
+
+
+To make an order::
+
+    from btfx_trader import Trader
+
+    trader = Trader('YOUR_BITFINEX_KEY', 'YOUR_BITFINEX_SECRET')
+    trader.connect()
+    # Order 0.01 BTC at $10000 per bitcoin
+    order_id = trader.order('BTCUSD', 10000, dollar_amount=100)
+::
+
+To cancel an order::
+
+    # for a single order
+    trader.cancel(order_id)
+    # for multiple orders
+    trader.cancel_all(older_than=10)
+::
+
+
+Credits
+-------
+
+This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+
+.. _Cookiecutter: https://github.com/audreyr/cookiecutter
+.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
