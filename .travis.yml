@@ -12,5 +12,5 @@ deploy:
     secure: Wr2RFweL9vz1vWYfz/5mxnp/up80Wo9rM3Ng4T5iUTWA4jsiplFnf7q7/kVyUgK6rwjGHZUgo6BXadPB7AG9/i961PaZ6VIG0CzM/45LdN/ryVAVwcfcsDjpoFVRJwRQMTR5TJusZoiFHCH+gdrfpneAEBcrS3Lf37Y8a0FnkERuI0EOFqsWKNvP4/oZVKz5+jW6vRebxpvN0jOsHPd1LgVXpRDGfHy4g5HeRVB05mIaa5qmaGj/L5mEsvhd5xWjCcOhil2lFIaXf/3qBPxOwP4+6DR/Koqy0Rkwr9qP0hvwJ3Q9KUxf+tvqBOb1I69aK8sjPxCceHdu7CSDsiN5cCWACtp8Zl6bMbCAcPvA+tVvNZBC4tJZv3TsRnq7nyX5/BqW6puz+Z/B9svoLYZ+Z44LWTJZQDLJTkn0kQiW2oAnQaALTV4qI4oVacz9m+5AOGndJWjq+II9zQStnz6Qs7DW3csPmYIOyA+06D+WOXcP9nxcKS76Cx4zvSCIH6OvFqKp8V1s4iAvuxwO/fR864UQMCjMXf+SNH1sksq25Wu8xY1xRcYq0tKedA5BQcJxHJD3vhelF333bJVq/POhW+gyp6YuK133wzK0wTVP6O/UHEMD3tFC7qIMXuccQB21D/2h9jl1R/R/vVHBSTpWVum7pI1PlbQP15SP8syZ8Og=
   on:
     tags: true
-    repo: sentrip/btfx_trader
+    repo: sentrip/btfx-trader
     python: 3.6
