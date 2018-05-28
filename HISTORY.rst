@@ -18,3 +18,9 @@ History
 ------------------
 
 * Added codecov to docs.
+
+
+0.1.3 (2018-05-28)
+------------------
+
+* Updated codecov config to only run with travis-ci builds.

@@ -2,7 +2,9 @@ language: python
 python:
 - 3.6
 - 3.5
-install: pip install -U tox-travis
+install:
+- pip install -U tox-travis
+- pip install -U codecov
 script: tox
 deploy:
   provider: pypi
@@ -14,3 +16,4 @@ deploy:
     tags: true
     repo: sentrip/btfx-trader
     python: 3.6
+after_success: codecov -t dd6afa75-20db-4cf0-8c51-2a3fd2f95dd4

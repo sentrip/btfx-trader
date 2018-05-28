@@ -12,7 +12,7 @@ To install btfx-trader, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install btfx_trader
+    $ pip install btfx-trader
 
 This is the preferred method to install btfx-trader, as it will always install the most recent stable release.
 
@@ -38,7 +38,7 @@ Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/sentrip/btfx_trader/tarball/master
+    $ curl  -OL https://github.com/sentrip/btfx-trader/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/sentrip/btfx_trader
-.. _tarball: https://github.com/sentrip/btfx_trader/tarball/master
+.. _Github repo: https://github.com/sentrip/btfx-trader
+.. _tarball: https://github.com/sentrip/btfx-trader/tarball/master

@@ -4,18 +4,21 @@ btfx-trader
 
 
 .. image:: https://img.shields.io/pypi/v/btfx_trader.svg
-        :target: https://pypi.python.org/pypi/btfx-trader/
+    :target: https://pypi.python.org/pypi/btfx-trader/
 
 .. image:: https://travis-ci.org/sentrip/btfx-trader.svg?branch=master
-        :target: https://travis-ci.org/sentrip/btfx-trader/
+    :target: https://travis-ci.org/sentrip/btfx-trader/
 
 .. image:: https://readthedocs.org/projects/btfx-trader/badge/?version=latest
-        :target: https://btfx-trader.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
+    :target: https://btfx-trader.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
+.. image:: https://codecov.io/gh/sentrip/btfx-trader/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/sentrip/btfx-trader
 
 .. image:: https://pyup.io/repos/github/sentrip/btfx_trader/shield.svg
-     :target: https://pyup.io/repos/github/sentrip/btfx-trader/
-     :alt: Updates
+    :target: https://pyup.io/repos/github/sentrip/btfx-trader/
+    :alt: Updates
 
 
 
@@ -41,7 +44,7 @@ To install btfx-trader, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install btfx_trader
+    $ pip install btfx-trader
 
 Usage
 ------
