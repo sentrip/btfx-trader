@@ -22,7 +22,7 @@ btfx-trader
 
 
 
-"Simple to use wrappers for Bitfinex's web socket api"
+Simple to use wrappers for Bitfinex's web socket api
 
 
 * Free software: GNU General Public License v3
@@ -32,10 +32,8 @@ btfx-trader
 Features
 --------
 
-* Access to cryptocurrency data with api of queue.Queue
-* Simple api for trading that responds to account data
-* No boilerplate required to start trading
-
+* Access to cryptocurrency data with an API similar to queue.Queue
+* Simple trading API that responds to account data
 
 Installation
 -------------
@@ -44,7 +42,7 @@ To install btfx-trader, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install btfx-trader
+    pip install btfx-trader
 
 Usage
 ------

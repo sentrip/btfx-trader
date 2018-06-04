@@ -24,3 +24,9 @@ History
 ------------------
 
 * Updated codecov config to only run with travis-ci builds.
+
+
+0.1.4 (2018-06-04)
+------------------
+
+* Updated README
