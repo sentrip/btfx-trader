@@ -40,7 +40,7 @@ Installation
 
 To install btfx-trader, run this command in your terminal:
 
-.. code-block:: console
+.. code-block:: shell
 
     pip install btfx-trader
 
