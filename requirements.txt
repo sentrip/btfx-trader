@@ -1,2 +1,2 @@
-btfxwss==1.1.16
+btfxwss==1.2.1
 requests>=2.18.4
