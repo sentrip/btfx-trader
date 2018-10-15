@@ -7,7 +7,7 @@ btfx-trader
     :target: https://pypi.python.org/pypi/btfx-trader/
 
 .. image:: https://travis-ci.org/sentrip/btfx-trader.svg?branch=master
-    :target: https://travis-ci.org/sentrip/btfx-trader/
+    :target: https://travis-ci.com/sentrip/btfx-trader/
 
 .. image:: https://readthedocs.org/projects/btfx-trader/badge/?version=latest
     :target: https://btfx-trader.readthedocs.io/en/latest/?badge=latest

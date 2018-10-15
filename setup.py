@@ -12,7 +12,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'btfxwss>=1.1.16',
+    'btfxwss==1.1.16',
     'requests>=2.18.4'
 ]
 
@@ -43,6 +43,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/sentrip/btfx_trader',
-    version='0.1.5',
+    version='0.1.6',
     zip_safe=False,
 )
