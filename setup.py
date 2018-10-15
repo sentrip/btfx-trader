@@ -12,7 +12,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'btfxwss>=1.1.16',
+    'btfxwss==1.1.16',
     'requests>=2.18.4'
 ]
 
