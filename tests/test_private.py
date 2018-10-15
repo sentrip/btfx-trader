@@ -177,7 +177,7 @@ def test_value_after_price_update(patched_get_symbols, trader, setup_trader):
         ]], 1527273347.1]
     )
     now, diff = time(), 0
-    while trader.value == value and diff < 1e-3:
+    while trader.value == value and diff < 5e-3:
         sleep(1e-5)
         diff = time() - now
     trader.close()
