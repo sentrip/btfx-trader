@@ -25,7 +25,7 @@ btfx-trader
 Simple to use wrappers for Bitfinex's web socket api
 
 
-* Free software: GNU General Public License v3
+* Free software: `MIT License <https://github.com/sentrip/btfx-trader/blob/master/LICENSE>`_
 * Documentation: https://btfx-trader.readthedocs.io.
 
 
@@ -81,12 +81,3 @@ To cancel an order:
     # for multiple orders
     trader.cancel_all(older_than=10)
 
-
-
-Credits
--------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
