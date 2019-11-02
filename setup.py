@@ -13,7 +13,7 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'btfxwss==1.1.16',
-    'requests==2.19.1'
+    'requests==2.20.0'
 ]
 
 setup_requirements = ['pytest-runner', ]
