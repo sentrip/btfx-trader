@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version:
+          - '3.6'
+          - '3.8'
+        include:
+          - python-version: '3.7'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -U tox-travis
+      - run: pip install -U codecov
+      - run: tox
+      - run: codecov -t dd6afa75-20db-4cf0-8c51-2a3fd2f95dd4
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        if: startsWith(github.ref, 'refs/tags/') && github.repository == 'sentrip/btfx-trader' && matrix.python-version == '3.6'
+        with:
+          user: sentrip
+          password: ${{ secrets.PYPI_PASSWORD }}
